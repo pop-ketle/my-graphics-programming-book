@@ -86,15 +86,19 @@
             // 入力されたキーに応じて処理内容を変化させる
             switch(event.key){
                 case 'ArrowLeft':
+                case 'a':
                     viperX-=10;
                     break;
                 case 'ArrowRight':
+                case 'd':
                     viperX+=10;
                     break;
                 case 'ArrowUp':
+                case 'w':
                     viperY-=10;
                     break;
                 case 'ArrowDown':
+                case 's':
                     viperY+=10;
                     break;
             }
