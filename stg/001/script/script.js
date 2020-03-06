@@ -1,5 +1,13 @@
 (() => {
     /**
+     * キーの桜花状態を調べるためのオブジェクト
+     * このオブジェクトはプロジェクトのどこからでも参照できるように
+     * windowオブジェクトのカスタムプロパティとして設定する
+     * @global@type {object}
+     */
+    window.isKeyDown = {};
+
+    /**
      * canvasの幅
      * @type {number}
      */
@@ -92,27 +100,14 @@
     function eventSetting(){
         // キーの押下時に呼び出されるイベントリスナーを設定する
         window.addEventListener('keydown', (event) => {
-            // 登場シーンなら何もしないで終了
-            if(viper.isComing===true){ return; }
-            // 入力されたキーに応じて処理内容を変化させる
-            switch(event.key){
-                case 'ArrowLeft':
-                case 'a':
-                    viper.position.x-=10;
-                    break;
-                case 'ArrowRight':
-                case 'd':
-                    viper.position.x+=10;
-                    break;
-                case 'ArrowUp':
-                case 'w':
-                    viper.position.y-=10;
-                    break;
-                case 'ArrowDown':
-                case 's':
-                    viper.position.y+=10;
-                    break;
-            }
+            // キーの押下状態を管理するオブジェクトに押下されたことを設定する
+            isKeyDown[`key_${event.key}`] = true;
+
+        },false);
+        // キーが話された時に呼び出されるイベントリスナーを設定する
+        window.addEventListener('keyup', (event) => {
+            // キーが話されたことを設定する
+            isKeyDown[`key_${event.key}`] = false;
         },false);
     }
 

@@ -99,6 +99,11 @@ class Viper extends Character {
         super(ctx,x,y,w,h,0,image);
 
         /**
+         * 自身の移動スピード(update 1回あたりの移動量)
+         * @type {number}
+         */
+        this.speed = 3;
+        /**
          * viperが搭乗中かどうかを表すフラグ
          * @type {boolean}
          */
@@ -161,7 +166,30 @@ class Viper extends Character {
             
             // 自機の登場演出時は点滅させる
             if(justTime%100 < 50){ this.ctx.glovalAlpha = 0.5; }
+
+        }else{
+            // キーの押下状態に応じて処理内容を変化させる
+            console.log(window.isKeydown);
+            if(window.isKeyDown.key_ArrowLeft===true || window.isKeyDown.key_a===true){
+                this.position.x-=this.speed;
+            }
+            if(window.isKeyDown.key_ArrowRight===true || window.isKeyDown.key_d===true){
+                this.position.x+=this.speed;
+            }
+            if(window.isKeyDown.key_ArrowUp===true || window.isKeyDown.key_w===true){
+                this.position.y-=this.speed;
+            }
+            if(window.isKeyDown.key_ArrowDown===true || window.isKeyDown.key_s===true){
+                this.position.y+=this.speed;
+            }
+            // 移動後の位置が画面外へ出ていないか確認して修正する
+            let canvasWidth  = this.ctx.canvas.width;
+            let canvasHeight = this.ctx.canvas.height
+            let tx = Math.min(Math.max(this.position.x,0),canvasWidth);
+            let ty = Math.min(Math.max(this.position.y,0),canvasHeight);
+            this.position.set(tx,ty);
         }
+
 
         // 自機キャラクターを描画する
         this.draw();
