@@ -51,6 +51,10 @@ class Character{
         /**
          * @type {number}
          */
+        this.angle = 270 * Math.PI/180;
+        /**
+         * @type {number}
+         */
         this.width = w;
         /**
          * @type {number}
@@ -76,6 +80,29 @@ class Character{
     }
 
     /**
+     * 進行方向を設定する
+     * @param {number} x,y - X,Y方向の移動量
+     */
+    setVector(x,y){
+        // 自身のvectorプロパティに設定する
+        this.vector.set(x,y);
+    }
+
+    /**
+     * 進行方向を角度を元に設定する
+     * @param {number} angle - 回転量(ラジアン)
+     */
+    setVectorFromAngle(angle){
+        // 自身の回転量を設定する
+        this.angle = angle;
+        // ラジアンからサインとコサインを求める
+        let sin = Math.sin(angle);
+        let cos = Math.cos(angle);
+        // 自身のvectorプロパティに設定する
+        this.vector.set(cos,sin);
+    }
+
+    /**
      * キャラクターを描画する
      */
     draw(){
@@ -90,6 +117,32 @@ class Character{
             this.width,
             this.height
         );
+    }
+
+    /**
+     * 自身の回転量を元に座標系を回転させる
+     */
+    rotationDraw(){
+        this.ctx.save(); // 座標系を回転する前の状態を保存する
+        // 自身の位置が座標系の中心となるように平行移動する
+        this.ctx.translate(this.position.x,this.position.y);
+        // 座標系を回転させる(270どの位置を基準にするため Math.PI*1.5 を引いている)
+        this.ctx.rotate(this.angle - Math.PI*1.5);
+
+        // キャラクターの幅を考慮してオフセットする位置
+        let offsetX = this.width/2;
+        let offsetY = this.height/2;
+        // キャラクターの幅やオフセットする量を加味して描画する
+        this.ctx.drawImage(
+            this.image,
+            -offsetX,
+            -offsetY,
+            this.width, // 先に translate で平行移動しているのでオフセットのみ行う
+            this.height // 先に translate で平行移動しているのでオフセットのみ行う
+        );
+
+        // 座標系を回転する前の状態に戻す
+        this.ctx.restore();
     }
 }
 
@@ -252,11 +305,14 @@ class Viper extends Character {
                     for(i=0;i<this.singleShotArray.length;i+=2){
                         // 非生存かどうかを確認する
                         if(this.singleShotArray[i].life<=0 && this.singleShotArray[i+1].life<=0){
+                            // 真上の方向(270度)から左右に10度傾いたラジアン
+                            let radCW  = 280*Math.PI / 180; // 時計回りに10度分
+                            let radCCW = 260*Math.PI /180; // 反時計回りに10度分
                             // 自機キャラクターの座標にショットを生成する
                             this.singleShotArray[i].set(this.position.x,this.position.y);
-                            this.singleShotArray[i].setVector(0.2,-0.9); // やや右に向かう
+                            this.singleShotArray[i].setVectorFromAngle(radCW); // やや右に向かう
                             this.singleShotArray[i+1].set(this.position.x,this.position.y);
-                            this.singleShotArray[i+1].setVector(-0.2,-0.9); // やや左に向かう
+                            this.singleShotArray[i+1].setVectorFromAngle(radCCW); // やや左に向かう
                             // ショットを生成したのでインターバルを設定する
                             this.shotCheckCounter = -this.shotInterval;
                             // 一組生成したらループぬ抜ける
@@ -312,14 +368,6 @@ class Shot extends Character {
         this.position.set(x,y);
         // ショットのライフを0より大きい値(生存の状態)に設定する
         this.life = 1;
-    }
-    /**
-     * ショットの進行方向せ設定する
-     * @param {number} x,y - X,Y方向の移動量
-     */
-    setVector(x,y){
-        // 自身のvectorプロパティに設定する
-        this.vector.set(x,y);
     }
 
     /**
