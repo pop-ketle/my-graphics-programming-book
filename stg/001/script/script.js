@@ -53,6 +53,11 @@
      * @type {Array<Shot>}
      */
     let shotArray = [];
+    /**
+     * シングルショットのインスタンスを格納する配列
+     * @type {Array<Show>}
+     */
+    let singleShotArray = [];
 
     /**
      * ページのロードが完了した時に発火する loadイベント
@@ -93,10 +98,12 @@
         // ショットを初期化する
         for(let i=0;i<SHOT_MAX_COUNT;++i){
             shotArray[i] = new Shot(ctx,0,0,32,32,'./image/viper_shot.png');
+            singleShotArray[i*2] = new Shot(ctx,0,0,32,32,'./image/viper_single_shot.png');
+            singleShotArray[i*2 + 1] = new Shot(ctx,0,0,32,32,'./image/viper_single_shot.png');
         }
 
         // ショットを時期キャラクターに設定する
-        viper.setShotArray(shotArray);
+        viper.setShotArray(shotArray,singleShotArray);
     }
 
     /**
@@ -107,6 +114,10 @@
         ready = ready && viper.ready; // AND演算で準備完了しているかチェックする
         // 同様にショットの準備状況も確認する
         shotArray.map((v) => {
+            ready = ready && v.ready;
+        });
+        //ど同様にシングルショットの準備状況も確認する
+        singleShotArray.map((v) => {
             ready = ready && v.ready;
         });
 
@@ -154,6 +165,10 @@
 
         // ショットの状態を更新する
         shotArray.map((v) => {
+            v.update();
+        });
+        // シングルショットの状態を更新する
+        singleShotArray.map((v) => {
             v.update();
         });
 
