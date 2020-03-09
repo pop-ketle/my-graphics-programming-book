@@ -1,5 +1,3 @@
-
-
 /**
  * 座標を管理するためのクラス
  */
@@ -48,6 +46,10 @@ class Character{
          * @type {Position}
          */
         this.position = new Position(x,y);
+        /**
+         * @type {Position}
+         */
+        this.vector = new Position(0.0,-1.0);
         /**
          * @type {number}
          */
@@ -126,7 +128,7 @@ class Character{
         this.ctx.save(); // 座標系を回転する前の状態を保存する
         // 自身の位置が座標系の中心となるように平行移動する
         this.ctx.translate(this.position.x,this.position.y);
-        // 座標系を回転させる(270どの位置を基準にするため Math.PI*1.5 を引いている)
+        // 座標系を回転させる(270度の位置を基準にするため Math.PI*1.5 を引いている)
         this.ctx.rotate(this.angle - Math.PI*1.5);
 
         // キャラクターの幅を考慮してオフセットする位置
@@ -135,10 +137,10 @@ class Character{
         // キャラクターの幅やオフセットする量を加味して描画する
         this.ctx.drawImage(
             this.image,
-            -offsetX,
-            -offsetY,
-            this.width, // 先に translate で平行移動しているのでオフセットのみ行う
-            this.height // 先に translate で平行移動しているのでオフセットのみ行う
+            -offsetX, // 先に translate で平行移動しているのでオフセットのみ行う
+            -offsetY, // 先に translate で平行移動しているのでオフセットのみ行う
+            this.width,
+            this.height
         );
 
         // 座標系を回転する前の状態に戻す
@@ -244,7 +246,7 @@ class Viper extends Character {
         // 現時点のタイムスタンプを取得する
         let justTime = Date.now();
 
-        // 登場シーンの処理
+        // 登場シーンかどうかに応じて処理を振り分ける
         if(this.isComing===true){
             // 登場シーンが始まってからの経過時間
             let comingTime = (justTime - this.comingStart) / 1000;
@@ -252,8 +254,8 @@ class Viper extends Character {
             let y = this.comingStartPosition.y - comingTime*50;
             // 一定の位置まで移動したら登場シーンを終了する
             if(y<=this.comingEndPosition.y){
-                this.isComing = false;       // 登場シーンフラグを下ろす
-                y = this.comingEndPosition.y // 行き過ぎの可能性もあるので位置を再設定
+                this.isComing = false;        // 登場シーンフラグを下ろす
+                y = this.comingEndPosition.y; // 行き過ぎの可能性もあるので位置を再設定
             }
             // 求めたY座標を自機に設定する
             this.position.set(this.position.x, y);
@@ -277,15 +279,15 @@ class Viper extends Character {
             }
             // 移動後の位置が画面外へ出ていないか確認して修正する
             let canvasWidth  = this.ctx.canvas.width;
-            let canvasHeight = this.ctx.canvas.height
+            let canvasHeight = this.ctx.canvas.height;
             let tx = Math.min(Math.max(this.position.x,0),canvasWidth);
             let ty = Math.min(Math.max(this.position.y,0),canvasHeight);
             this.position.set(tx,ty);
 
             // キーの押下状態を調べてショットを生成する
             if(window.isKeyDown.key_z===true){
-                // ショットを打てる状態なのかを確認する
-                // ショットチェック用のカウンタが0以上ならショットを生成できる
+                // ショットを撃てる状態なのかを確認する
+                // ショットチェック用カウンタが0以上ならショットを生成できる
                 if(this.shotCheckCounter>=0){
                     let i;
                     // ショットの生存を確認し非生存の物があれば生成する
@@ -307,7 +309,7 @@ class Viper extends Character {
                         if(this.singleShotArray[i].life<=0 && this.singleShotArray[i+1].life<=0){
                             // 真上の方向(270度)から左右に10度傾いたラジアン
                             let radCW  = 280*Math.PI / 180; // 時計回りに10度分
-                            let radCCW = 260*Math.PI /180; // 反時計回りに10度分
+                            let radCCW = 260*Math.PI /180;  // 反時計回りに10度分
                             // 自機キャラクターの座標にショットを生成する
                             this.singleShotArray[i].set(this.position.x,this.position.y);
                             this.singleShotArray[i].setVectorFromAngle(radCW); // やや右に向かう
@@ -315,7 +317,7 @@ class Viper extends Character {
                             this.singleShotArray[i+1].setVectorFromAngle(radCCW); // やや左に向かう
                             // ショットを生成したのでインターバルを設定する
                             this.shotCheckCounter = -this.shotInterval;
-                            // 一組生成したらループぬ抜ける
+                            // 一組生成したらループを抜ける
                             break;
                         }
                     }
@@ -330,6 +332,56 @@ class Viper extends Character {
 
         // 念のためグローバルなアルファの状態を元に戻す
         this.ctx.globalAlpha = 1.0;
+    }
+}
+
+/**
+ * 敵キャラクタークラス
+ */
+class Enemy extends Character {
+    /**
+     * @constructor
+     * @param {CanvasRenderingContext2D} ctx - 描画などに利用する2Dコンテキスト
+     * @param {number} x,y - X,Y座標
+     * @param {number} w,h - 幅、高さ
+     * @param {Image} image - キャラクター用の画像のパス
+     */
+    constructor(ctx,x,y,w,h,imagePath){
+        super(ctx,x,y,w,h,0,imagePath); // 継承元の初期化
+
+        /**
+         * 自身の移動スピード(update一回あたりの移動量)
+         * @type {number}
+         */
+        this.speed = 3;
+    }
+
+    /**
+     * 敵を配置する
+     * @param {number} x,y - 配置するX,Y座標
+     * @param {number} [life=1] - 設定するライフ
+     */
+    set(x,y,life=1){
+        // 登場開始位置に敵キャラクターを移動させる
+        this.position.set(x,y);
+        // 敵キャラクターのライフを0より大きい値(生存状態)に設定
+        this.life = life;
+    }
+
+    /**
+     * キャラクターの状態を更新し描画を行う
+     */
+    update(){
+        // もし敵キャラクターのライフが0以下の場合は何もしない
+        if(this.life<=0){ return; }
+        // もし敵キャラクターが画面外(画面下端)へ移動していたらライフ0(非生存状態)に設定
+        if(this.position.y-this.height > this.ctx.canvas.height){ this.life=0; }
+        // 敵キャラクターを進行方向に剃って移動させる
+        this.position.x+=this.vector.x*this.speed;
+        this.position.y+=this.vector.y*this.speed;
+
+        // 描画を行う(今の所特に回転は必要としていないのでそのまま描画)
+        this.draw();
     }
 }
 
@@ -352,11 +404,6 @@ class Shot extends Character {
          * @type {numer}
          */
         this.speed = 7;
-        /**
-         * ショットの進行方向
-         * @type {Position}
-         */
-        this.vector = new Position(0.0,-1.0);
     }
 
     /**
@@ -381,7 +428,8 @@ class Shot extends Character {
         // ショットを進行方向に向かって移動させる
         this.position.x+=this.vector.x*this.speed;
         this.position.y+=this.vector.y*this.speed;
-        // ショットを描画する
-        this.draw();
+
+        // 座標系の回転を考慮した描画を行う
+        this.rotationDraw();
     }
 }
