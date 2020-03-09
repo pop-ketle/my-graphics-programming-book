@@ -350,23 +350,49 @@ class Enemy extends Character {
         super(ctx,x,y,w,h,0,imagePath); // 継承元の初期化
 
         /**
+         * 自身のタイプ
+         * @type {string}
+         */
+        this.type = 'default';
+        /**
+         * 自身が出現してからのフレーム数
+         * @type {number}
+         */
+        this.fframe = 0;
+        /**
          * 自身の移動スピード(update一回あたりの移動量)
          * @type {number}
          */
         this.speed = 3;
+        /**
+         * 自身が持つショットインスタンスの配列
+         * @type {Array<Shot>}
+         */
+        this.shotArray = null;
     }
 
     /**
      * 敵を配置する
      * @param {number} x,y - 配置するX,Y座標
      * @param {number} [life=1] - 設定するライフ
+     * @param {string} [type='default'] - 設定するタイプ
      */
-    set(x,y,life=1){
+    set(x,y,life=1,type='default'){
         // 登場開始位置に敵キャラクターを移動させる
         this.position.set(x,y);
         // 敵キャラクターのライフを0より大きい値(生存状態)に設定
         this.life = life;
+        // 敵キャラクターのタイプを設定する
+        this.type = type;
+        // 敵キャラクターのフレームをリセットする
+        this.frame = 0;
     }
+
+    /**
+     * ショットを設定する
+     * @param {Array<Shot>} shotArray - 自身に設定するショットの配列
+     */
+    setShotArray(shotArray){ this.shotArray = shotArray; } // 自身のプロパティに設定する
 
     /**
      * キャラクターの状態を更新し描画を行う
@@ -374,14 +400,48 @@ class Enemy extends Character {
     update(){
         // もし敵キャラクターのライフが0以下の場合は何もしない
         if(this.life<=0){ return; }
-        // もし敵キャラクターが画面外(画面下端)へ移動していたらライフ0(非生存状態)に設定
-        if(this.position.y-this.height > this.ctx.canvas.height){ this.life=0; }
-        // 敵キャラクターを進行方向に剃って移動させる
-        this.position.x+=this.vector.x*this.speed;
-        this.position.y+=this.vector.y*this.speed;
+
+        // タイプに応じて挙動を変える
+        // タイプに応じてライフを0以下の場合は何もしない
+        switch(this.type){
+            case 'default':
+            default:
+                // 配置後のフレームが50の時にショットを放つ
+                if(this.frame===50){ this.fire(); }
+                // 敵キャラクターを進行方向に沿って移動させる
+                this.position.x+=this.vector.x*this.speed;
+                this.position.y+=this.vector.y*this.speed;
+                // もし敵キャラクターが画面外(画面下端)へ移動していたらライフ0(非生存状態)に設定
+                if(this.position.y-this.height > this.ctx.canvas.height){ this.life=0; }
+                break;
+        }
+
 
         // 描画を行う(今の所特に回転は必要としていないのでそのまま描画)
         this.draw();
+        // 自身のフレームをインクリメントする
+        ++this.frame;
+    }
+
+    /**
+     * 自身から指定された方向にショットを放つ
+     * @param {number} [x=0.0,y=1.0] - 進行方向のベクトルのX,Y要素
+     */
+    fire(x=0.0,y=1.0){
+        // ショットの生存を確認し非生Ω存のものがあれば生成する
+        for(let i=0;i<this.shotArray.length;++i){
+            // 非生存かどうかを確認する
+            if(this.shotArray[i].life<=0){
+                // 敵キャラクターの座標にショットを生成する
+                this.shotArray[i].set(this.position.x,this.position.y);
+                // ショットのスピードを設定する
+                this.shotArray[i].setSpeed(5.0);
+                // ショットの進行方向を設定する(真下)
+                this.shotArray[i].setVector(x,y);
+                // 一つ生成したらループを抜ける
+                break;
+            }
+        }
     }
 }
 
@@ -410,11 +470,21 @@ class Shot extends Character {
      * ショットを配置する
      * @param {number} x,y - 配置するX,Y座標
      */
-    set(x,y){
+    set(x,y,speed){
         // 登場開始位置にショットを移動させる
         this.position.set(x,y);
         // ショットのライフを0より大きい値(生存の状態)に設定する
         this.life = 1;
+        // スピードを設定する
+        this.setSpeed(speed);
+    }
+    /**
+     * ショットのスピードを設定する
+     * @param {number} [speed] - 設定するスピード
+     */
+    setSpeed(speed){
+        // もしスピード引数が有効なら設定する
+        if(speed!=null && speed>0){ this.speed = speed; }
     }
 
     /**
@@ -424,7 +494,10 @@ class Shot extends Character {
         // もしショットのライフが0以下の場合は何もしない
         if(this.life<=0){ return; }
         // もしショットが画面外に移動していたらライフを0(非生存の状態)に設定
-        if(this.position.y+this.height<0){ this.life=0; }
+        if(
+            this.position.y+this.height<0 ||
+            this.position.y-this.height>this.ctx.canvas.height
+        ){ this.life=0; }
         // ショットを進行方向に向かって移動させる
         this.position.x+=this.vector.x*this.speed;
         this.position.y+=this.vector.y*this.speed;

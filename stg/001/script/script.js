@@ -28,6 +28,11 @@
      * @type {number}
      */
     const SHOT_MAX_COUNT = 10;
+    /**
+     * 敵キャラクターのショットの最大個数
+     * @type {number}
+     */
+    const ENEMY_SHOT_MAX_COUNT = 50;
 
     /**
      * Canvas2D APIをラップしたユーティリティクラス
@@ -74,6 +79,11 @@
      * @type {Array<Shot>}
      */
     let singleShotArray = [];
+    /**
+     * 敵キャラクターのショットのインスタンスを格納する配列
+     * @type {Array<Shot>}
+     */
+    let enemyShotArray = [];
 
     /**
      * ページのロードが完了した時に発火する loadイベント
@@ -103,6 +113,13 @@
 
         // シーンを初期化する
         scene = new SceneManager();
+        
+                // 自機のショットを初期化する
+                for(i=0;i<SHOT_MAX_COUNT;++i){
+                    shotArray[i] = new Shot(ctx,0,0,32,32,'./image/viper_shot.png');
+                    singleShotArray[i*2] = new Shot(ctx,0,0,32,32,'./image/viper_single_shot.png');
+                    singleShotArray[i*2 + 1] = new Shot(ctx,0,0,32,32,'./image/viper_single_shot.png');
+                }
         // 自機キャラクターを初期化する
         viper = new Viper(ctx,0,0,64,64,'./image/viper.png');
         // 登場シーンからスタートするための設定
@@ -112,21 +129,20 @@
             CANVAS_WIDTH/2,   // 登場演出を終了とするX座標
             CANVAS_HEIGHT-100 // 登場演出を終了とするY座標
         );
-
+        // ショットを自機キャラクターに設定する
+        viper.setShotArray(shotArray,singleShotArray);
+        
+        // 敵キャラクターのショットを初期化する
+        for(i=0;i<ENEMY_SHOT_MAX_COUNT;++i){
+            enemyShotArray[i] = new Shot(ctx,0,0,32,32,'./image/enemy_shot.png');
+        }
+        
         // 敵キャラクターを初期化する
         for(i=0;i<ENEMY_MAX_COUNT;++i){
             enemyArray[i] = new Enemy(ctx,0,0,48,48,'./image/enemy_small.png')
+            // 敵キャラクターは全て同じショットを共有するのでここで与えておく
+            enemyArray[i].setShotArray(enemyShotArray);
         }
-
-        // ショットを初期化する
-        for(i=0;i<SHOT_MAX_COUNT;++i){
-            shotArray[i] = new Shot(ctx,0,0,32,32,'./image/viper_shot.png');
-            singleShotArray[i*2] = new Shot(ctx,0,0,32,32,'./image/viper_single_shot.png');
-            singleShotArray[i*2 + 1] = new Shot(ctx,0,0,32,32,'./image/viper_single_shot.png');
-        }
-
-        // ショットを時期キャラクターに設定する
-        viper.setShotArray(shotArray,singleShotArray);
     }
 
     /**
@@ -145,6 +161,10 @@
         });
         // 同様にシングルショットの準備状況も確認する
         singleShotArray.map((v) => {
+            ready = ready && v.ready;
+        });
+        // 同様に敵キャラクターのショットの準備状況も確認する
+        enemyShotArray.map((v) => {
             ready = ready && v.ready;
         });
         
@@ -188,19 +208,22 @@
         });
         // invadeシーン
         scene.add('invade',(time) => {
-            // シーンのフレーム数が0の時以外は即座に終了する
-            if(scene.frame!==0){ return; }
-            // ライフが0状態の敵キャラクターが見つかったら配置する
-            for(let i=0;i<ENEMY_MAX_COUNT;++i){
-                if(enemyArray[i].life<=0){
-                    let e = enemyArray[i];
-                    // 出現場所はXが画面中央、Yが画面上端の外側に設定
-                    e.set(CANVAS_WIDTH/2,-e.height);
-                    // 進行方向は真下に向かうように設定する
-                    e.setVector(0.0,1.0);
-                    break;
+            // シーンのフレーム数が0の時は敵キャラクターを配置する
+            if(scene.frame===0){
+                // ライフが0状態の敵キャラクターが見つかったら配置する
+                for(let i=0;i<ENEMY_MAX_COUNT;++i){
+                    if(enemyArray[i].life<=0){
+                        let e = enemyArray[i];
+                        // 出現場所はXが画面中央、Yが画面上端の外側に設定
+                        e.set(CANVAS_WIDTH/2,-e.height,1,'default');
+                        // 進行方向は真下に向かうように設定する
+                        e.setVector(0.0,1.0);
+                        break;
+                    }
                 }
             }
+            // シーンのフレーム数が100になった時にinvadeを再設定する
+            if(scene.frame===100){ scene.use('invade'); }
         });
         // 一番最初のシーンにはintroを設定する
         scene.use('intro');
@@ -236,6 +259,11 @@
         singleShotArray.map((v) => {
             v.update();
         });
+
+        // 敵キャラクターのショットの状態を更新する
+        enemyShotArray.map((v) => {
+            v.update();
+        })
 
         // 恒常ループのために描画処理を再帰呼出しする
         requestAnimationFrame(render);
