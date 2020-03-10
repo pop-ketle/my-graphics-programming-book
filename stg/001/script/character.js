@@ -171,7 +171,7 @@ class Viper extends Character {
      */
     constructor(ctx,x,y,w,h,imagePath){
         // 継承元の初期化
-        super(ctx,x,y,w,h,0,imagePath);
+        super(ctx,x,y,w,h,1,imagePath);
 
         /**
          * 自身の移動スピード(update 1回あたりの移動量)
@@ -226,6 +226,8 @@ class Viper extends Character {
      * @param {number} endX,endY - 登場終了とするX,Y座標
      */
     setComing(startX,startY,endX,endY){
+        // 時期キャラクターのライフを1に設定する(復活する際を考慮)
+        this.life = 1;
         // 登場中のフラグを立てる
         this.isComing = true;
         // 登場開始時のタイムスタンプを取得する
@@ -252,6 +254,8 @@ class Viper extends Character {
      * キャラクターの状態を更新し描画を行う
      */
     update(){
+        // ライフが尽きていたら何も操作できないようにする
+        if(this.life<=0){ return; }
         // 現時点のタイムスタンプを取得する
         let justTime = Date.now();
 
@@ -564,8 +568,12 @@ class Shot extends Character {
             if(this.life<=0 || v.life<=0){ return; }
             // 自身の位置と対象との距離を測る
             let dist = this.position.distance(v.position);
-            // 自身た対象の幅の1/4の距離まで近づいてくる場合衝突とみなす
+            // 自身と対象の幅の1/4の距離まで近づいてくる場合衝突とみなす
             if(dist<=(this.width+v.width) / 4){
+                // 自機キャラクターが対象の場合isComingフラグによって無敵になる
+                if(v instanceof Viper===true){
+                    if(v.isComing===true){ return; }
+                }
                 // 対象のライフを攻撃力分減算する
                 v.life-=this.power;
                 // もし対象のライフが0以下になっていたら爆発エフェクトを発生させる
@@ -697,7 +705,7 @@ class Explosion {
         this.ctx.fillStyle = this.color; // 爆発エフェクト用の色を設定する
         this.ctx.globalAlpha = 0.5;
         // 爆発が発生してからの経過時間を求める
-        let time = (Date.now()-this.startTime) / 1000; // TODO: 10000くらいで割るのがちょうどいいかも
+        let time = (Date.now()-this.startTime) / 1000;
         // 爆発終了までの時間で正規化して進捗度合いを算出する
         let ease = simpleEaseIn(1.0-Math.min(time/this.timeRange,1.0));
         let progress = 1.0-ease;
