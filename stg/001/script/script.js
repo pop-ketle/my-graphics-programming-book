@@ -143,6 +143,13 @@
             // 敵キャラクターは全て同じショットを共有するのでここで与えておく
             enemyArray[i].setShotArray(enemyShotArray);
         }
+
+        // 衝突判定を行うために対象を設定する
+        for(i=0;i<SHOT_MAX_COUNT;++i){
+            shotArray[i].setTargets(enemyArray);
+            singleShotArray[i*2].setTargets(enemyArray);
+            singleShotArray[i*2 + 1].setTargets(enemyArray);
+        }
     }
 
     /**
@@ -215,7 +222,7 @@
                     if(enemyArray[i].life<=0){
                         let e = enemyArray[i];
                         // 出現場所はXが画面中央、Yが画面上端の外側に設定
-                        e.set(CANVAS_WIDTH/2,-e.height,1,'default');
+                        e.set(CANVAS_WIDTH/2,-e.height,2,'default');
                         // 進行方向は真下に向かうように設定する
                         e.setVector(0.0,1.0);
                         break;

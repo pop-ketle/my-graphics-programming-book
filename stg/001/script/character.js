@@ -23,6 +23,16 @@ class Position {
         if(x!=null){ this.x = x; }
         if(y!=null){ this.y = y; }
     }
+
+    /**
+     * 対象のPositionクラスのインスタンスとの距離を返す
+     * @param {Position} target - 距離を測る対象
+     */
+    distance(target){
+        let x = this.x-target.x;
+        let y = this.y-target.y;
+        return Math.sqrt(x*x + y*y);
+    }
 }
 
 /**
@@ -262,7 +272,6 @@ class Viper extends Character {
             
             // 自機の登場演出時は点滅させる
             if(justTime%100 < 50){ this.ctx.globalAlpha = 0.5; }
-
         }else{
             // キーの押下状態に応じて処理内容を変化させる
             if(window.isKeyDown.key_ArrowLeft===true || window.isKeyDown.key_a===true){
@@ -296,6 +305,8 @@ class Viper extends Character {
                         if(this.shotArray[i].life<=0){
                             // 自機キャラクターの座標にショットを生成する
                             this.shotArray[i].set(this.position.x,this.position.y);
+                            // 中央のショットは攻撃力を2にする
+                            this.shotArray[i].setPower(2);
                             // ショットを生成したのでインターバルを設定する
                             this.shotCheckCounter = -this.shotInterval;
                             // 一つ生成したらループを抜ける
@@ -464,19 +475,31 @@ class Shot extends Character {
          * @type {numer}
          */
         this.speed = 7;
+        /**
+         * 自身の攻撃力
+         * @type {number}
+         */
+        this.power = 1;
+        /**
+         * 自身と衝突判定と撮る対象を格納する
+         * @type {Array<Character>}
+         */
+        this.targetArray = [];
     }
 
     /**
      * ショットを配置する
      * @param {number} x,y - 配置するX,Y座標
      */
-    set(x,y,speed){
+    set(x,y,speed,power){
         // 登場開始位置にショットを移動させる
         this.position.set(x,y);
         // ショットのライフを0より大きい値(生存の状態)に設定する
         this.life = 1;
         // スピードを設定する
         this.setSpeed(speed);
+        // 攻撃力を設定する
+        this.setPower(power);
     }
     /**
      * ショットのスピードを設定する
@@ -485,6 +508,26 @@ class Shot extends Character {
     setSpeed(speed){
         // もしスピード引数が有効なら設定する
         if(speed!=null && speed>0){ this.speed = speed; }
+    }
+
+    /**
+     * ショットの攻撃力を設定する
+     * @param {number} [power] - 設定する攻撃力
+     */
+    setPower(power){
+        // もしスピ０度引数が有効なら設定する
+        if(power!=null && power>0){ this.power = power; }
+    }
+
+    /**
+     * ショットが衝突判定を行う対象を設定する
+     * @param {Array<Character>} [targets] - 衝突判定の対象を含む配列
+     */
+    setTargets(targets){
+        // 引数の状態を確認して有効な場合は設定する
+        if(targets!=null && Array.isArray(targets)===true && targets.length>0){
+            this.targetArray = targets;
+        }
     }
 
     /**
@@ -501,6 +544,21 @@ class Shot extends Character {
         // ショットを進行方向に向かって移動させる
         this.position.x+=this.vector.x*this.speed;
         this.position.y+=this.vector.y*this.speed;
+
+        // ショットと対象との衝突判定を行う
+        this.targetArray.map((v) => {
+            // 自身か対象のライフが0以下の対象は無視する
+            if(this.life<=0 || v.life<=0){ return; }
+            // 自身の位置と対象との距離を測る
+            let dist = this.position.distance(v.position);
+            // 自身た対象の幅の1/4の距離まで近づいてくる場合衝突とみなす
+            if(dist<=(this.width+v.width) / 4){
+                // 対象のライフを攻撃力分減算する
+                v.life-=this.power;
+                // 自身らライフを0にする
+                this.life = 0;
+            }
+        });
 
         // 座標系の回転を考慮した描画を行う
         this.rotationDraw();
