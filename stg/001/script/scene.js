@@ -44,9 +44,9 @@ class SceneManager {
     use(name){
         // 指定されたシーンが存在するか確認する
         if(this.scene.hasOwnProperty(name)!==true){ return; } // 存在しなかった場合は何もせずに終了する
-        // 名前を元にアクティブなシーンを設定する
+        // 名前をもとにアクティブなシーンを設定する
         this.activeScene = this.scene[name];
-        // シーンをアクティブにした瞬間たタイムスタンプを設定する
+        // シーンをアクティブにした瞬間のタイムスタンプを設定する
         this.startTime = Date.now();
         // シーンをアクティブにしたのでカウンタをリセットする
         this.frame = -1;

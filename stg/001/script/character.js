@@ -38,7 +38,7 @@ class Position {
 /**
  * キャラクター管理のための基幹クラス
  */
-class Character{
+class Character {
     /**
      * @constructor
      * @param {CanvasRenderingContext2D} ctx - 描画などに利用する 2D コンテキスト
@@ -141,7 +141,7 @@ class Character{
         // 座標系を回転させる(270度の位置を基準にするため Math.PI*1.5 を引いている)
         this.ctx.rotate(this.angle - Math.PI*1.5);
 
-        // キャラクターの幅を考慮してオフセットする位置
+        // キャラクターの幅を考慮してオフセットする量
         let offsetX = this.width/2;
         let offsetY = this.height/2;
         // キャラクターの幅やオフセットする量を加味して描画する
@@ -170,8 +170,7 @@ class Viper extends Character {
      * @param {Image} image - キャラクターの画像用のパス
      */
     constructor(ctx,x,y,w,h,imagePath){
-        // Characterクラスを継承しているのでまずは継承元となるCharacterクラスのコンストラクタを呼び出すことで初期化する
-        // (superが継承元のコンストラクタの呼び出しに相当する)
+        // 継承元の初期化
         super(ctx,x,y,w,h,0,imagePath);
 
         /**
@@ -180,7 +179,7 @@ class Viper extends Character {
          */
         this.speed = 3;
         /**
-         * ショットを撃った後のチェックカウンタ
+         * ショットを撃ったあとのチェック用カウンタ
          * @type {number}
          */
         this.shotCheckCounter = 0;
@@ -299,7 +298,7 @@ class Viper extends Character {
                 // ショットチェック用カウンタが0以上ならショットを生成できる
                 if(this.shotCheckCounter>=0){
                     let i;
-                    // ショットの生存を確認し非生存の物があれば生成する
+                    // ショットの生存を確認し非生存のものがあれば生成する
                     for(i=0;i<this.shotArray.length;++i){
                         // 非生存かどうかを確認する
                         if(this.shotArray[i].life<=0){
@@ -309,7 +308,7 @@ class Viper extends Character {
                             this.shotArray[i].setPower(2);
                             // ショットを生成したのでインターバルを設定する
                             this.shotCheckCounter = -this.shotInterval;
-                            // 一つ生成したらループを抜ける
+                            // ひとつ生成したらループを抜ける
                             break;
                         }
                     }
@@ -320,7 +319,7 @@ class Viper extends Character {
                         if(this.singleShotArray[i].life<=0 && this.singleShotArray[i+1].life<=0){
                             // 真上の方向(270度)から左右に10度傾いたラジアン
                             let radCW  = 280*Math.PI / 180; // 時計回りに10度分
-                            let radCCW = 260*Math.PI /180;  // 反時計回りに10度分
+                            let radCCW = 260*Math.PI / 180; // 反時計回りに10度分
                             // 自機キャラクターの座標にショットを生成する
                             this.singleShotArray[i].set(this.position.x,this.position.y);
                             this.singleShotArray[i].setVectorFromAngle(radCW); // やや右に向かう
@@ -341,7 +340,7 @@ class Viper extends Character {
         // 自機キャラクターを描画する
         this.draw();
 
-        // 念のためグローバルなアルファの状態を元に戻す
+        // 念の為グローバルなアルファの状態を元に戻す
         this.ctx.globalAlpha = 1.0;
     }
 }
@@ -369,7 +368,7 @@ class Enemy extends Character {
          * 自身が出現してからのフレーム数
          * @type {number}
          */
-        this.fframe = 0;
+        this.frame = 0;
         /**
          * 自身の移動スピード(update一回あたりの移動量)
          * @type {number}
@@ -389,21 +388,19 @@ class Enemy extends Character {
      * @param {string} [type='default'] - 設定するタイプ
      */
     set(x,y,life=1,type='default'){
-        // 登場開始位置に敵キャラクターを移動させる
-        this.position.set(x,y);
-        // 敵キャラクターのライフを0より大きい値(生存状態)に設定
-        this.life = life;
-        // 敵キャラクターのタイプを設定する
-        this.type = type;
-        // 敵キャラクターのフレームをリセットする
-        this.frame = 0;
+        this.position.set(x,y); // 登場開始位置に敵キャラクターを移動させる
+        this.life  = life;  // 敵キャラクターのライフを0より大きい値(生存状態)に設定
+        this.type  = type;  // 敵キャラクターのタイプを設定する
+        this.frame = 0;     // 敵キャラクターのフレームをリセットする
     }
 
     /**
      * ショットを設定する
      * @param {Array<Shot>} shotArray - 自身に設定するショットの配列
      */
-    setShotArray(shotArray){ this.shotArray = shotArray; } // 自身のプロパティに設定する
+    setShotArray(shotArray){
+        this.shotArray = shotArray; // 自身のプロパティに設定する
+    }
 
     /**
      * キャラクターの状態を更新し描画を行う
@@ -415,6 +412,7 @@ class Enemy extends Character {
         // タイプに応じて挙動を変える
         // タイプに応じてライフを0以下の場合は何もしない
         switch(this.type){
+            // default タイプは設定されている進行方向にまっすぐ進むだけの挙動
             case 'default':
             default:
                 // 配置後のフレームが50の時にショットを放つ
@@ -439,7 +437,7 @@ class Enemy extends Character {
      * @param {number} [x=0.0,y=1.0] - 進行方向のベクトルのX,Y要素
      */
     fire(x=0.0,y=1.0){
-        // ショットの生存を確認し非生Ω存のものがあれば生成する
+        // ショットの生存を確認し非生存のものがあれば生成する
         for(let i=0;i<this.shotArray.length;++i){
             // 非生存かどうかを確認する
             if(this.shotArray[i].life<=0){
@@ -472,7 +470,7 @@ class Shot extends Character {
 
         /**
          * 自身の移動スピード(update一回あたりの移動量)
-         * @type {numer}
+         * @type {number}
          */
         this.speed = 7;
         /**
@@ -481,26 +479,31 @@ class Shot extends Character {
          */
         this.power = 1;
         /**
-         * 自身と衝突判定と撮る対象を格納する
+         * 自身と衝突判定を取る対象を格納する
          * @type {Array<Character>}
          */
         this.targetArray = [];
+        /**
+         * 爆発エフェクトのインスタンスを格納する
+         * @type {Array<Explosion>}
+         */
+        this.explosionArray = [];
     }
 
     /**
      * ショットを配置する
      * @param {number} x,y - 配置するX,Y座標
+     * @param {number} [speed] - 設定するスピード
+     * @param {number} [power] - 設定する攻撃力
      */
     set(x,y,speed,power){
         // 登場開始位置にショットを移動させる
         this.position.set(x,y);
-        // ショットのライフを0より大きい値(生存の状態)に設定する
-        this.life = 1;
-        // スピードを設定する
-        this.setSpeed(speed);
-        // 攻撃力を設定する
-        this.setPower(power);
+        this.life = 1; // ショットのライフを0より大きい値(生存の状態)に設定する
+        this.setSpeed(speed); // スピードを設定する
+        this.setPower(power); // 攻撃力を設定する
     }
+
     /**
      * ショットのスピードを設定する
      * @param {number} [speed] - 設定するスピード
@@ -515,7 +518,7 @@ class Shot extends Character {
      * @param {number} [power] - 設定する攻撃力
      */
     setPower(power){
-        // もしスピ０度引数が有効なら設定する
+        // もしスピード引数が有効なら設定する
         if(power!=null && power>0){ this.power = power; }
     }
 
@@ -527,6 +530,16 @@ class Shot extends Character {
         // 引数の状態を確認して有効な場合は設定する
         if(targets!=null && Array.isArray(targets)===true && targets.length>0){
             this.targetArray = targets;
+        }
+    }
+    /**
+     * ショットが爆発エフェクトを発生できるよう設定する
+     * @param {Array<Explosion>} [targets] - 爆発エフェクトを含む配列
+     */
+    setExplosions(targets){
+        // 引数の状態を確認して有効な場合は設定する
+        if(targets!=null && Array.isArray(targets)===true && targets.length>0){
+            this.explosionArray = targets;
         }
     }
 
@@ -555,12 +568,146 @@ class Shot extends Character {
             if(dist<=(this.width+v.width) / 4){
                 // 対象のライフを攻撃力分減算する
                 v.life-=this.power;
-                // 自身らライフを0にする
+                // もし対象のライフが0以下になっていたら爆発エフェクトを発生させる
+                if(v.life<=0){
+                    for(let i=0;i<this.explosionArray.length;++i){
+                        // 発生していない爆発エフェクトがあれば対象の位置に生成する
+                        if(this.explosionArray[i].life!==true){
+                            this.explosionArray[i].set(v.position.x,v.position.y);
+                            break;
+                        }
+                    }
+                }
+                // 自身のライフを0にする
                 this.life = 0;
             }
         });
 
         // 座標系の回転を考慮した描画を行う
         this.rotationDraw();
+    }
+}
+
+/**
+ * 爆発エフェクトクラス
+ */
+class Explosion {
+    /**
+     * @constructor
+     * @param {CanvasRenderingContext2D} ctx - 描画などに利用する2Dコンテキスト
+     * @param {number} radius - 爆発の広がりの半径
+     * @param {number} count - 爆発の火花の数
+     * @param {number} size - 爆発の火花の大きさ(幅・高さ)
+     * @param {number} timeRange - 爆発が消えるまでの時間(秒単位)
+     * @param {string} [color='#ff1166'] - 爆発の色
+     */
+    constructor(ctx,radius,count,size,timeRange,color='#ff1166'){
+        /**
+         * @type {CanvasRenderingContext2D}
+         */
+        this.ctx = ctx;
+        /**
+         * 爆発の生存状態を表すフラグ
+         * @type {boolean}
+         */
+        this.life = false;
+        /**
+         * 爆発をfillする際の色
+         * @type {string}
+         */
+        this.color = color;
+        /**
+         * 自身の座標
+         * @type {Position}
+         */
+        this.position = null;
+        /**
+         * 爆発の広がりの半径
+         * @type {number}
+         */
+        this.radius = radius;
+        /**
+         * 爆発の火花の数
+         * @type {number}
+         */
+        this.count = count;
+        /**
+         * 爆発が始まった瞬間のタイムスタンプ
+         * @type {number}
+         */
+        this.startTime = 0;
+        /**
+         * 爆発が消えるまでの時間
+         * @type {number}
+         */
+        this.timeRange = timeRange;
+        /**
+         * 火花の一つあたりの大きさ(幅・高さ)
+         * @type {number}
+         */
+        this.fireSize = size;
+        /**
+         * 火花の位置を格納する
+         * @type {Array<Position>}
+         */
+        this.firePosition = [];
+        /**
+         * 火花の進行方向を格納する
+         * @type {Array<Position>}
+         */
+        this.fireVector = [];
+    }
+
+    /**
+     * 爆発エフェクトを設定する
+     * @param {number} x,y - 爆発を発生させるX,Y座標
+     */
+    set(x,y){
+        // 火花の個数分ループして生成する
+        for(let i=0;i<this.count;++i){
+            // 引数を元に位置を決める
+            this.firePosition[i] = new Position(x,y);
+            // ランダムに火花が進む方向(となるラジアン)を決める
+            let r = Math.random() * Math.PI*2.0;
+            // ラジアンを元にサインとコサインを生成し進行方向に設定する
+            let s = Math.sin(r);
+            let c = Math.cos(r);
+            this.fireVector[i] = new Position(c,s);
+        }
+        // 爆発の生存状態を設定
+        this.life = true;
+        // 爆発が始まる瞬間のタイムスタンプを取得する
+        this.startTime = Date.now();
+    }
+
+    /**
+     * 爆発エフェクトを更新する
+     */
+    update(){
+        if(this.life!==true){ return; } // 生存状態を確認する
+        this.ctx.fillStyle = this.color; // 爆発エフェクト用の色を設定する
+        this.ctx.globalAlpha = 0.5;
+        // 爆発が発生してからの経過時間を求める
+        let time = (Date.now()-this.startTime) / 1000;
+        // 爆発終了までの時間で正規化して進捗度合いを算出する
+        let progress = Math.min(time/this.timeRange,1.0);
+
+        // 進捗度合いに応じた位置に火花を描画する
+        for(let i=0;i<this.firePosition.length;++i){
+            let d = this.radius*progress; // 火花が広がる距離
+            // 広がる距離分だけ移動した位置
+            let x = this.firePosition[i].x + this.fireVector[i].x*d;
+            let y = this.firePosition[i].y + this.fireVector[i].y*d;
+            // 矩形を描画する
+            this.ctx.fillRect(
+                x - this.fireSize/2,
+                y - this.fireSize/2,
+                this.fireSize,
+                this.fireSize
+            );
+
+            // 進捗が100%相当まで進んでいたら非生存の状態にする
+            if(progress>=1.0){ this.life = false; }
+        }
     }
 }

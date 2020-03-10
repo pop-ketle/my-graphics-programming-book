@@ -33,6 +33,11 @@
      * @type {number}
      */
     const ENEMY_SHOT_MAX_COUNT = 50;
+    /**
+     * 爆発エフェクトの最大個数
+     * @type {number}
+     */
+    const EXPLOSION_MAX_COUNT = 10;
 
     /**
      * Canvas2D APIをラップしたユーティリティクラス
@@ -84,6 +89,11 @@
      * @type {Array<Shot>}
      */
     let enemyShotArray = [];
+    /**
+     * 爆発エフェクトのインスタンスを格納する配列
+     * @type {Array<Explosion>}
+     */
+    let explosionArray = [];
 
     /**
      * ページのロードが完了した時に発火する loadイベント
@@ -113,13 +123,19 @@
 
         // シーンを初期化する
         scene = new SceneManager();
+
+        // 爆発エフェクトを初期化した
+        for(i=0;i<EXPLOSION_MAX_COUNT;++i){
+            explosionArray[i] = new Explosion(ctx,50.0,15,30.0,0.25);
+        }
         
-                // 自機のショットを初期化する
-                for(i=0;i<SHOT_MAX_COUNT;++i){
-                    shotArray[i] = new Shot(ctx,0,0,32,32,'./image/viper_shot.png');
-                    singleShotArray[i*2] = new Shot(ctx,0,0,32,32,'./image/viper_single_shot.png');
-                    singleShotArray[i*2 + 1] = new Shot(ctx,0,0,32,32,'./image/viper_single_shot.png');
-                }
+        // 自機のショットを初期化する
+        for(i=0;i<SHOT_MAX_COUNT;++i){
+            shotArray[i] = new Shot(ctx,0,0,32,32,'./image/viper_shot.png');
+            singleShotArray[i*2] = new Shot(ctx,0,0,32,32,'./image/viper_single_shot.png');
+            singleShotArray[i*2+1] = new Shot(ctx,0,0,32,32,'./image/viper_single_shot.png');
+        }
+
         // 自機キャラクターを初期化する
         viper = new Viper(ctx,0,0,64,64,'./image/viper.png');
         // 登場シーンからスタートするための設定
@@ -139,16 +155,20 @@
         
         // 敵キャラクターを初期化する
         for(i=0;i<ENEMY_MAX_COUNT;++i){
-            enemyArray[i] = new Enemy(ctx,0,0,48,48,'./image/enemy_small.png')
+            enemyArray[i] = new Enemy(ctx,0,0,48,48,'./image/enemy_small.png');
             // 敵キャラクターは全て同じショットを共有するのでここで与えておく
             enemyArray[i].setShotArray(enemyShotArray);
         }
 
         // 衝突判定を行うために対象を設定する
+        // 爆発エフェクトを行うためにショットを設定する
         for(i=0;i<SHOT_MAX_COUNT;++i){
             shotArray[i].setTargets(enemyArray);
             singleShotArray[i*2].setTargets(enemyArray);
-            singleShotArray[i*2 + 1].setTargets(enemyArray);
+            singleShotArray[i*2+1].setTargets(enemyArray);
+            shotArray[i].setExplosions(explosionArray);
+            singleShotArray[i*2].setExplosions(explosionArray);
+            singleShotArray[i*2+1].setExplosions(explosionArray);
         }
     }
 
@@ -195,7 +215,6 @@
         window.addEventListener('keydown', (event) => {
             // キーの押下状態を管理するオブジェクトに押下されたことを設定する
             isKeyDown[`key_${event.key}`] = true;
-
         },false);
         // キーが離された時に呼び出されるイベントリスナーを設定する
         window.addEventListener('keyup', (event) => {
@@ -222,6 +241,7 @@
                     if(enemyArray[i].life<=0){
                         let e = enemyArray[i];
                         // 出現場所はXが画面中央、Yが画面上端の外側に設定
+                        // この敵キャラクターのライフを2に設定する
                         e.set(CANVAS_WIDTH/2,-e.height,2,'default');
                         // 進行方向は真下に向かうように設定する
                         e.setVector(0.0,1.0);
@@ -262,6 +282,7 @@
         shotArray.map((v) => {
             v.update();
         });
+
         // シングルショットの状態を更新する
         singleShotArray.map((v) => {
             v.update();
@@ -270,7 +291,12 @@
         // 敵キャラクターのショットの状態を更新する
         enemyShotArray.map((v) => {
             v.update();
-        })
+        });
+
+        // 爆発エフェクトの状態を更新する
+        explosionArray.map((v) => {
+            v.update();
+        });
 
         // 恒常ループのために描画処理を再帰呼出しする
         requestAnimationFrame(render);
