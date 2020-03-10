@@ -697,9 +697,10 @@ class Explosion {
         this.ctx.fillStyle = this.color; // 爆発エフェクト用の色を設定する
         this.ctx.globalAlpha = 0.5;
         // 爆発が発生してからの経過時間を求める
-        let time = (Date.now()-this.startTime) / 1000;
+        let time = (Date.now()-this.startTime) / 1000; // TODO: 10000くらいで割るのがちょうどいいかも
         // 爆発終了までの時間で正規化して進捗度合いを算出する
-        let progress = Math.min(time/this.timeRange,1.0);
+        let ease = simpleEaseIn(1.0-Math.min(time/this.timeRange,1.0));
+        let progress = 1.0-ease;
 
         // 進捗度合いに応じた位置に火花を描画する
         for(let i=0;i<this.firePosition.length;++i){
@@ -721,4 +722,8 @@ class Explosion {
             if(progress>=1.0){ this.life = false; }
         }
     }
+}
+
+function simpleEaseIn(t){
+    return t*t*t*t;
 }
