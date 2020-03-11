@@ -7,6 +7,14 @@
      * @type {object}
      */
     window.isKeyDown = {};
+    /**
+     * スコアを格納する
+     * このオブジェクトはプロジェクトのどこからでも参照できるように
+     * windowオブジェクトのカスタムプロパティとして設定する
+     * @global
+     * @type {number}
+     */
+    window.gameScore = 0;
 
     /**
      * canvasの幅
@@ -283,8 +291,8 @@
             util.drawText('GAME OVER',x,CANVAS_HEIGHT/2,'#ff0000',textWidth);
             // 再スタートのための処理
             if(restart===true){
-                // 再スタートフラグはここでまず最初に下げておく
-                restart = false;
+                restart = false; // 再スタートフラグはここでまず最初に下げておく
+                gameScore = 0; // スコアをリセットしておく
                 // 再度スタートするために座標等の設定
                 viper.setComing(
                     CANVAS_WIDTH/2,   // 登場演出時の開始X座標
@@ -309,6 +317,10 @@
         util.drawRect(0,0,canvas.width,canvas.height,'#eeeeee');
         // 現在までの経過時間を取得する(ミリ秒を秒に変換するため1000で除算)
         let nowTime = (Date.now() - startTime) / 1000;
+
+        // スコアの表示
+        ctx.font = 'bold 24px monospace';
+        util.drawText(zeroPadding(gameScore,5),30,50,'#111111');
 
         // シーンを更新する
         scene.update();
@@ -352,5 +364,19 @@
     function generateRandomInt(range){
         let random = Math.random();
         return Math.floor(random*range);
+    }
+
+    /**
+     * 数値の不足した桁数をゼロで梅田文字列を返す
+     * @param {number} number - 数値
+     * @param {number} count - 桁数(2桁以上)
+     */
+    function zeroPadding(number,count){
+        // 配列を指定の桁数分の長さで初期化する
+        let zeroArray = new Array(count);
+        // 配列の要素を'0'を挟んで連結する(つまり「桁数-1」の0が連なる)
+        let zeroString = zeroArray.join('0')+number;
+        // 文字列の後ろから桁数分だけ文字を抜き取る
+        return zeroString.slice(-count);
     }
 })();
