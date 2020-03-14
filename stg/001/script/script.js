@@ -51,6 +51,20 @@
      * @type {number}
      */
     const EXPLOSION_MAX_COUNT = 10;
+    /**
+     * 背景を流れる星の個数
+     * @type {number}
+     */
+    const BACKGROUND_STAR_MAX_COUNT = 100;
+    /**
+     * 背景を流れる星の最大サイズ
+     * @type {number}
+     */
+    const BACKGROUND_STAR_MAX_SIZE = 3;
+    /**
+     * 背景を流れる星の最大速度
+     */
+    const BACKGROUND_STAR_MAX_SPEED = 4;
 
     /**
      * Canvas2D APIをラップしたユーティリティクラス
@@ -107,6 +121,11 @@
      * @type {Array<Explosion>}
      */
     let explosionArray = [];
+    /**
+     * 流れる星のインスタンスを格納する配列
+     * @type {Array<BackgroundStar>}
+     */
+    let backgroundStarArray = [];
     /**
      * 再スタートするためのフラグ
      * @type {boolean}
@@ -200,6 +219,19 @@
             shotArray[i].setExplosions(explosionArray);
             singleShotArray[i*2].setExplosions(explosionArray);
             singleShotArray[i*2+1].setExplosions(explosionArray);
+        }
+
+        // 流れる星を初期化する
+        for(i=0;i<BACKGROUND_STAR_MAX_COUNT;++i){
+            // 星の速度と大きさはランダムと最大値によって決まるようにする
+            let size  = 1 + Math.random()*(BACKGROUND_STAR_MAX_SIZE-1);
+            let speed = 1 + Math.random()*(BACKGROUND_STAR_MAX_SPEED-1)
+            // 星のインスタンスを生成する
+            backgroundStarArray[i] = new BackgroundStar(ctx,size,speed);
+            // 星の初期位置もランダムに決まるようにする
+            let x = Math.random()*CANVAS_WIDTH;
+            let y = Math.random()*CANVAS_HEIGHT;
+            backgroundStarArray[i].set(x,y);
         }
     }
 
@@ -406,17 +438,22 @@
     function render(){
         // グローバルなアルファを必ず1.0で描画処理を開始する
         ctx.globalAlpha = 1.0;
-        // 描画前に画面全体を不透明な明るいグレーで塗りつぶす
-        util.drawRect(0,0,canvas.width,canvas.height,'#eeeeee');
+        // 描画前に画面全体を暗いネイビーで塗りつぶす
+        util.drawRect(0,0,canvas.width,canvas.height,'#111122');
         // 現在までの経過時間を取得する(ミリ秒を秒に変換するため1000で除算)
         let nowTime = (Date.now() - startTime) / 1000;
 
         // スコアの表示
         ctx.font = 'bold 24px monospace';
-        util.drawText(zeroPadding(gameScore,5),30,50,'#111111');
+        util.drawText(zeroPadding(gameScore,5),30,50,'#ffffff');
 
         // シーンを更新する
         scene.update();
+
+        // 流れる星の状態を更新する
+        backgroundStarArray.map((v) => {
+            v.update();
+        });
 
         // 自機キャラクターの状態を更新する
         viper.update();
