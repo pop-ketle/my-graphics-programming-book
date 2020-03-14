@@ -63,6 +63,7 @@
     const BACKGROUND_STAR_MAX_SIZE = 3;
     /**
      * 背景を流れる星の最大速度
+     * @type {number}
      */
     const BACKGROUND_STAR_MAX_SPEED = 4;
 
@@ -131,6 +132,11 @@
      * @type {boolean}
      */
     let restart = false;
+    /**
+     * 効果音再生のためのSoundクラスのインスタンス
+     * @type {Sound}
+     */
+    let sound = null;
 
     /**
      * ページのロードが完了した時に発火する loadイベント
@@ -142,11 +148,31 @@
         canvas = util.canvas;
         // ユーティリティクラスから2dコンテキストを取得
         ctx = util.context;
-
-        // 初期化処理を行う
-        initialize();
-        // インスタンスの状態を確認する
-        loadCheck();
+        // canvasの大きさを設定
+        canvas.width  = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+        
+        // スタートボタンへの参照を取得
+        let button = document.body.querySelector('#start_button');
+        // スタートボタンが押されたときに初期化が実行されるようにする
+        button.addEventListener('click',() => {
+            // ボタンを複数回押すことができないようにdisabled属性を付与する
+            button.disabled = true;
+            // ユーザーがクリック操作を行った際に初めてオーディオ関連の処理を開始する
+            sound = new Sound();
+            // 音声データを読み込み、準備完了してから初期化処理を行う
+            sound.load('./sound/explosion.mp3',(error) => {
+                // もしエラーが発生した場合はアラートを表示して終了する
+                if(error!=null){
+                    alert('ファイルの読み込みエラーです');
+                    return;
+                }
+                // 初期化処理を行う
+                initialize();
+                // インスタンスの状態を確認する
+                loadCheck();
+            });
+        },false);
     },false);
 
     /**
@@ -154,9 +180,6 @@
      */
     function initialize(){
         let i;
-        // canvasの大きさを設定
-        canvas.width  = CANVAS_WIDTH;
-        canvas.height = CANVAS_HEIGHT;
 
         // シーンを初期化する
         scene = new SceneManager();
@@ -164,6 +187,8 @@
         // 爆発エフェクトを初期化する
         for(i=0;i<EXPLOSION_MAX_COUNT;++i){
             explosionArray[i] = new Explosion(ctx,100.0,15,40.0,1.0);
+            // 爆発エフェクト発生時に効果音を再生できるよう設定する
+            explosionArray[i].setSound(sound);
         }
         
         // 自機のショットを初期化する
@@ -505,7 +530,7 @@
     }
 
     /**
-     * 数値の不足した桁数をゼロで梅田文字列を返す
+     * 数値の不足した桁数をゼロで埋めた文字列を返す
      * @param {number} number - 数値
      * @param {number} count - 桁数(2桁以上)
      */

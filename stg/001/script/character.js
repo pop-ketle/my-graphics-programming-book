@@ -257,6 +257,7 @@ class Viper extends Character {
         // 登場終了とする座標を設定する
         this.comingEndPosition = new Position(endX,endY);
     }
+    
     /**
      * ショットを設定する
      * @param {Array<Shot>} shotArray - 自身に設定するショットの配列
@@ -527,7 +528,7 @@ class Enemy extends Character {
                 this.shotArray[i].setSpeed(speed);
                 // ショットの進行方向を設定する(真下)
                 this.shotArray[i].setVector(x,y);
-                // 一つ生成したらループを抜ける
+                // ひとつ生成したらループを抜ける
                 break;
             }
         }
@@ -663,7 +664,7 @@ class Shot extends Character {
                             break;
                         }
                     }
-                    // もし対象ができキャラクターの場合はスコアを加算する
+                    // もし対象が敵キャラクターの場合はスコアを加算する
                     if(v instanceof Enemy===true){
                         // 敵キャラクターのタイプによってスコアが変化するようにする
                         let score = 100;
@@ -738,13 +739,13 @@ class Explosion {
          */
         this.timeRange = timeRange;
         /**
-         * 火花の一つ辺りの最大の大きさ(幅・高さ)
+         * 火花のひとつ辺りの最大の大きさ(幅・高さ)
          * @type {number}
          */
         this.fireBaseSize = size;
         /**
-         * 火花の一つあたりの大きさ(幅・高さ)
-         * @type {number}
+         * 火花のひとつあたりの大きさを格納する
+         * @type {Array<Position>}
          */
         this.fireSize = [];
         /**
@@ -757,6 +758,11 @@ class Explosion {
          * @type {Array<Position>}
          */
         this.fireVector = [];
+        /**
+         * サウンド再生のためのSoundクラスのインスタンス
+         * @type {Sound}
+         */
+        this.sound = null;
     }
 
     /**
@@ -783,6 +789,18 @@ class Explosion {
         this.life = true;
         // 爆発が始まる瞬間のタイムスタンプを取得する
         this.startTime = Date.now();
+
+        // サウンド再生の準備ができていたら、再生する
+        if(this.sound!=null){
+            this.sound.play();
+        }
+    }
+
+    /**
+     * Soundクラスのインスタンスを受け取り自身のプロパティとして保持する
+     */
+    setSound(sound){
+        this.sound = sound;
     }
 
     /**
@@ -828,7 +846,7 @@ class BackgroundStar {
      * @constuctor
      * @param {CanvasRenderingContext2D} ctx - 描画などに利用する2Dコンテキスト
      * @param {number} size - 星の大きさ(幅・高さ)
-     * @param {number} speed - 星の大きさ
+     * @param {number} speed - 星の移動速度
      * @param {string} [color='ffffff'] - 星の色
      */
     constructor(ctx,size,speed,color='ffffff'){
@@ -860,12 +878,13 @@ class BackgroundStar {
 
     /**
      * 星を設定する
-     * @param {number} x,y - 星は発生させるX,Y座標
+     * @param {number} x,y - 星を発生させるX,Y座標
      */
     set(x,y){
         // 引数を元に位置を決める
         this.position = new Position(x,y);
     }
+
     /**
      * 星を更新する
      */

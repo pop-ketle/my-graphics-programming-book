@@ -3,7 +3,7 @@
  */
 class Canvas2DUtility {
     /**
-     * @construtor
+     * @constructor
      * @param {HTMLCanvasElement} canvas - 対象となるcanvas element
      */
     constructor(canvas){
@@ -21,7 +21,6 @@ class Canvas2DUtility {
      * @return {HTMLCanvasElement}
      */
     get canvas(){return this.canvasElement;}
-
     /**
      * @return {CanvasRenderingContext2D}
      */
@@ -35,7 +34,7 @@ class Canvas2DUtility {
      */
     drawRect(x,y,width,height,color){
         // 色が指定されている場合はスタイルを設定
-        if(color!=null) this.context2d.fillStyle = color;
+        if(color!=null){ this.context2d.fillStyle = color; }
 
         this.context2d.fillRect(x,y,width,height);
     }
