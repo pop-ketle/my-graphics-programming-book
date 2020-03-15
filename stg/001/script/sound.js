@@ -52,6 +52,7 @@ class Sound {
         let node = new AudioBufferSourceNode(this.ctx,{buffer: this.source});
         // ノードを接続する
         node.connect(this.ctx.destination);
+        // ノードの再生が完了した後の解放処理を設定しておく
         node.addEventListener('ended',() => {
             // 念の為stopを実行
             node.stop();

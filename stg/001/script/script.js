@@ -47,6 +47,11 @@
      */
     const ENEMY_SHOT_MAX_COUNT = 50;
     /**
+     * ボスキャラクターのホーミングショットの最大個数
+     * @type {number}
+     */
+    const HOMING_MAX_COUNT = 50;
+    /**
      * 爆発エフェクトの最大個数
      * @type {number}
      */
@@ -98,6 +103,11 @@
      */
     let viper = null;
     /**
+     * ボスキャラクターのインスタンスを格納する配列
+     * @type {Boss}
+     */
+    let boss = null;
+    /**
      * 敵キャラクターのインスタンスを格納する配列
      * @type {Array<Enemy>}
      */
@@ -117,6 +127,11 @@
      * @type {Array<Shot>}
      */
     let enemyShotArray = [];
+    /**
+     * ボスキャラクターのホーミングショットのインスタンスを格納する配列
+     * @type {Array<Homing>}
+     */
+    let homingArray = [];
     /**
      * 爆発エフェクトのインスタンスを格納する配列
      * @type {Array<Explosion>}
@@ -217,6 +232,22 @@
             enemyShotArray[i].setExplosions(explosionArray);
         }
 
+        // ボスキャラクターのホーミングショットを初期化する
+        for(i=0;i<HOMING_MAX_COUNT;++i){
+            homingArray[i] = new Homing(ctx,0,0,32,32,'./image/homing_shot.png');
+            homingArray[i].setTargets([viper]); // 引数は配列なので注意
+            homingArray[i].setExplosions(explosionArray);
+        }
+
+        // ボスキャラクターを初期化する
+        boss = new Boss(ctx,0,0,128,128,'./image/boss.png');
+        // 敵キャラクターはすべて同じショットを共有するのでここで与えておく
+        boss.setShotArray(enemyShotArray);
+        // ボスキャラクターはホーミングショットを持っているので設定する
+        boss.setHomingArray(homingArray);
+        // 敵キャラクターは常に自機キャラクターを攻撃対象とする
+        boss.setAttackTarget(viper);
+
         // 敵キャラクター(小)を初期化する
         for(i=0;i<ENEMY_SMALL_MAX_COUNT;++i){
             enemyArray[i] = new Enemy(ctx,0,0,48,48,'./image/enemy_small.png');
@@ -235,12 +266,15 @@
             enemyArray[ENEMY_SMALL_MAX_COUNT+i].setAttackTarget(viper);
         }
 
+        // ボスキャラクターも衝突判定の対象とするために配列に加えておく
+        let concatEnemyArray = enemyArray.concat([boss]);
+
         // 衝突判定を行うために対象を設定する
         // 爆発エフェクトを行うためにショットに設定する
         for(i=0;i<SHOT_MAX_COUNT;++i){
-            shotArray[i].setTargets(enemyArray);
-            singleShotArray[i*2].setTargets(enemyArray);
-            singleShotArray[i*2+1].setTargets(enemyArray);
+            shotArray[i].setTargets(concatEnemyArray);
+            singleShotArray[i*2].setTargets(concatEnemyArray);
+            singleShotArray[i*2+1].setTargets(concatEnemyArray);
             shotArray[i].setExplosions(explosionArray);
             singleShotArray[i*2].setExplosions(explosionArray);
             singleShotArray[i*2+1].setExplosions(explosionArray);
@@ -274,6 +308,10 @@
         shotArray.map((v) => {
             ready = ready && v.ready;
         });
+        // 同様にホーミングショットの準備状況も確認する
+        homingArray.map((v) => {
+            ready = ready && v.ready;
+        });
         // 同様にシングルショットの準備状況も確認する
         singleShotArray.map((v) => {
             ready = ready && v.ready;
@@ -296,7 +334,7 @@
     }
 
     /**
-     * イベントを設定
+     * イベントを設定する
      */
     function eventSetting(){
         // キーの押下時に呼び出されるイベントリスナーを設定する
@@ -418,13 +456,33 @@
                     }
                 }
             }
-            // シーンのフレーム数が500になった時introへ
+            // シーンのフレーム数が500になったとき次のシーンへ
             if(scene.frame===500){
-                scene.use('intro');
+                scene.use('invade_boss');
             }
             // 自機キャラクターが被弾してライフが0になっていたらゲームオーバー
             if(viper.life<=0){
                 scene.use('gameover');
+            }
+        });
+        // invadeシーン(ボスキャラクターを生成)
+        scene.add('invade_boss',(time) => {
+            // シーンのフレーム数が0となるとなる最初のフレームでボスを登場させる
+            if(scene.frame===0){
+                // 画面中央上から登場するように位置を指定し、ライフは250に設定
+                boss.set(CANVAS_WIDTH/2,-boss.height,250);
+                // ボスキャラクター自身のモードはinvadeから始まるようにする
+                boss.setMode('invade');
+            }
+            // 自機キャラクターが被弾してライフが0になっていたらゲームオーバー
+            // ゲームオーバー画面が表示されているうちにボス自身は退避させる
+            if(viper.life<=0){
+                scene.use('gameover');
+                boss.setMode('escape');
+            }
+            // ボスが破壊されたらシーンをintroに設定する
+            if(boss.life<=0){
+                scene.use('intro');
             }
         });
         // ゲームオーバーシーン
@@ -483,6 +541,9 @@
         // 自機キャラクターの状態を更新する
         viper.update();
 
+        // ボスキャラクターの状態を更新する
+        boss.update();
+
         // 敵キャラクターの状態を更新する
         enemyArray.map((v) => {
             v.update();
@@ -500,6 +561,11 @@
 
         // 敵キャラクターのショットの状態を更新する
         enemyShotArray.map((v) => {
+            v.update();
+        });
+
+        // ボスキャラクターのホーミングショットの状態を更新する
+        homingArray.map((v) => {
             v.update();
         });
 

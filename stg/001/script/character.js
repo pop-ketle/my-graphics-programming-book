@@ -51,6 +51,42 @@ class Position {
         let y = this.y-target.y;
         return Math.sqrt(x*x + y*y);
     }
+
+    /**
+     * 対象のPositionクラスのインスタンスとの外積を計算する
+     * @param {Position} target - 外積の計算を行う対象
+     */
+    cross(target){
+        return this.x*target.y - this.y*target.x;
+    }
+
+    /**
+     * 自信を単位化したベクトルを計算して返す
+     */
+    normalize(){
+        // ベクトルの大きさを計算する
+        let l = Math.sqrt(this.x*this.x + this.y*this.y);
+        // 大きさが0の場合はXYも0なのでそのまま返す
+        if(l===0){ return new Position(0,0); }
+        // 自身のXY要素を大きさで割る
+        let x = this.x/l;
+        let y = this.y/l;
+        // 単位化されたベクトルを返す
+        return new Position(x,y);
+    }
+
+    /**
+     * 指定されたラジアン分だけ自身を回転させる
+     * @param {number} radian - 回転量
+     */
+    rotate(radian){
+        // 指定されたラジアンからサインとコサインを求める
+        let s = Math.sin(radian);
+        let c = Math.cos(radian);
+        // 2x2の回転行列と蒸散し回転させる
+        this.x = this.x*c + this.y*-s;
+        this.y = this.x*s + this.y*c;
+    }
 }
 
 /**
@@ -257,7 +293,7 @@ class Viper extends Character {
         // 登場終了とする座標を設定する
         this.comingEndPosition = new Position(endX,endY);
     }
-    
+
     /**
      * ショットを設定する
      * @param {Array<Shot>} shotArray - 自身に設定するショットの配列
@@ -536,6 +572,203 @@ class Enemy extends Character {
 }
 
 /**
+ * ボスキャラクタークラス
+ */
+class Boss extends Character {
+    /**
+     * @constructor
+     * @param {CanvasRenderingContext2D} ctx - 描画などに利用する2Dコンテキスト
+     * @param {number} x,y - X,Y座標
+     * @param {number} w,h - 幅、高さ
+     * @param {Image} image - キャラクター用の画像のパス
+     */
+    constructor(ctx,x,y,w,h,imagePath){
+        // 継承元の初期化
+        super(ctx,x,y,w,h,0,imagePath);
+
+        /**
+         * 自身のモード
+         * @type {string}
+         */
+        this.mode = '';
+        /**
+         * 自身が出現してからのフレーム数
+         * @type {number}
+         */
+        this.frame = 0;
+        /**
+         * 自身の移動スピード(update一回あたりの移動量)
+         * @type {number}
+         */
+        this.speed = 3;
+        /**
+         * 自身が持つショットインスタンスの配列
+         * @type {Array<Shot>}
+         */
+        this.shotArray = null;
+        /**
+         * 自身が持つホーミングショットインスタンスの配列
+         * @type {Array<Homing>}
+         */
+        this.homingArray = null;
+        /**
+         * 自身が攻撃の対象とするCharacter由来のインスタンス
+         * @type {Character}
+         */
+        this.attackTarget = null;
+    }
+    
+    /**
+     * ボスを配置する
+     * @param {number} x,y - 配置するX,Y座標
+     * @param {number} [life=1] - 設定するライフ
+     */
+    set(x,y,life=1){
+        // 登場開始位置にボスキャラクターを移動させる
+        this.position.set(x,y);
+        // ボスキャラクターのライフを0より大きい(生存状態)に設定する
+        this.life = life;
+        // ボスキャラクターのフレームをリセットする
+        this.frame = 0;
+    }
+
+    /**
+     * ショットを設定する
+     * @param {Array<Shot>} shotArray - 自身に設定するショットの配列
+     */
+    setShotArray(shotArray){
+        this.shotArray = shotArray; // 自身のプロパティに設定する
+    }
+
+    /**
+     * ホーミングショットを設定する
+     * @param {Array<Homing>} homingArray - 自身に設定するホーミングショットの配列
+     */
+    setHomingArray(homingArray){
+        this.homingArray = homingArray; // 自身のプロパティに設定する
+    }
+
+    /**
+     * 攻撃対象を設定する
+     * @param {Character} target - 自身が攻撃対象とするインスタンス
+     */
+    setAttackTarget(target){
+        this.attackTarget = target; // 自身のプロパティに設定する
+    }
+
+    /**
+     * モードを設定する
+     * @param {string} mode - 自身に設定するモード
+     */
+    setMode(mode){
+        this.mode = mode; // 自身のプロパティに設定する
+    }
+
+    /**
+     * ボスキャラクターの状態を更新し描画を行う
+     */
+    update(){
+        // もしボスキャラクターのライフが0以下の場合は何もしない
+        if(this.life<=0){ return; }
+
+        // モードに応じて挙動を変える
+        switch(this.mode){
+            // 出現演出時
+            case 'invade':
+                this.position.y+=this.speed;
+                if(this.position.y>100){
+                    this.position.y = 100;
+                    this.mode = 'floating';
+                    this.frame = 0;
+                }
+                break;
+            // 退避する演出時
+            case 'escape':
+                this.position.y-=this.speed;
+                if(this.position.y < -this.height){
+                    this.life = 0;
+                }
+                break;
+            case 'floating':
+                // 配置後のフレーム数を1000で割った時あまりが500未満となる場合と
+                // そうでない場合でショットに関する挙動を変化させる
+                if(this.frame%1000<500){
+                    // 配置後のフレーム数を200で割った余りが140より大きく、かつ、
+                    // 10で割り切れる場合に、自機キャラクター狙いショットを放つ
+                    if(this.frame%200>140 && this.frame%10===0){
+                        // 攻撃対象となる自機キャラクターに向かうベクトル
+                        let tx = this.attackTarget.position.x-this.position.x;
+                        let ty = this.attackTarget.position.y-this.position.y;
+                        // ベクトルを単位化する
+                        let tv = Position.calcNormal(tx,ty);
+                        // 自機キャラクターにややゆっくりめのショットを放つ
+                        this.fire(tv.x,tv.y,3.0);
+                    }
+                }else{
+                    // ホーミングショットを放つ
+                    if(this.frame%50===0){
+                        this.homingFire(0,1,3.5);
+                    }
+                }
+                // X座標はサイン波で左右に揺れるように動かす
+                this.position.x+=Math.cos(this.frame/100)*2.0;
+                break;
+            default:
+                break;
+        }
+
+        // 描画を行う(今の所特に回転は必要としていないのでそのまま描画)
+        this.draw();
+        // 自身のフレームをインクリメントする
+        ++this.frame;
+    }
+
+    /**
+     * 自身から指定された方向にショットを放つ
+     * @param {number} [x=0.0,y=1.0] - 進行方向ベクトルのX,Y要素
+     * @param {number} [speed=5.0] - ショットのスピード
+     */
+    fire(x=0.0,y=1.0,speed=5.0){
+        // シングルショットの生存を確認し非生存のものがあれば生成する
+        for(let i=0;i<this.shotArray.length;++i){
+            // 非生存かどうかを確認する
+            if(this.shotArray[i].life<=0){
+                // ボスキャラクターの座標にショットを生成する
+                this.shotArray[i].set(this.position.x,this.position.y);
+                // ショットのスピードを設定する
+                this.shotArray[i].setSpeed(speed);
+                // ショットの進行方向を設定する(真下)
+                this.shotArray[i].setVector(x,y);
+                // ひとつ生成したらループを抜ける
+                break;
+            }
+        }
+    }
+
+    /**
+     * 自身から指定された方向にホーミングショットを放つ
+     * @param {number} [x=0.0,y=1.0] - 進行方向ベクトルのX,Y要素
+     * @param {number} [speed=3.0] - ショットのスピード
+     */
+    homingFire(x=0.0,y=1.0,speed=3.0){
+        // ショットの生存を確認し非生存のものがあれば生成する
+        for(let i=0;i<this.homingArray.length;++i){
+            // 非生存かどうかを確認する
+            if(this.homingArray[i].life<=0){
+                // ボスキャラクターの座標にショットを生成する
+                this.homingArray[i].set(this.position.x,this.position.y);
+                // ショットのスピードを設定する
+                this.homingArray[i].setSpeed(speed);
+                // ショットの進行方向を設定する(真下)
+                this.homingArray[i].setVector(x,y);
+                // ひとつ生成したらループを抜ける
+                break;
+            }
+        }
+    }
+}
+
+/**
  * shotクラス
  */
 class Shot extends Character {
@@ -613,6 +846,7 @@ class Shot extends Character {
             this.targetArray = targets;
         }
     }
+
     /**
      * ショットが爆発エフェクトを発生できるよう設定する
      * @param {Array<Explosion>} [targets] - 爆発エフェクトを含む配列
@@ -630,14 +864,16 @@ class Shot extends Character {
     update(){
         // もしショットのライフが0以下の場合は何もしない
         if(this.life<=0){ return; }
-        // もしショットが画面外に移動していたらライフを0(非生存の状態)に設定
+        // もしショットが画面外へ移動していたらライフを0(非生存の状態)に設定
         if(
             this.position.x+this.width < 0 ||
             this.position.x-this.width > this.ctx.canvas.width ||
             this.position.y+this.height < 0 ||
             this.position.y-this.height > this.ctx.canvas.height
-        ){ this.life=0; }
-        // ショットを進行方向に向かって移動させる
+        ){
+            this.life = 0;
+        }
+        // ショットを進行方向に沿って移動させる
         this.position.x+=this.vector.x*this.speed;
         this.position.y+=this.vector.y*this.speed;
 
@@ -647,7 +883,7 @@ class Shot extends Character {
             if(this.life<=0 || v.life<=0){ return; }
             // 自身の位置と対象との距離を測る
             let dist = this.position.distance(v.position);
-            // 自身と対象の幅の1/4の距離まで近づいてくる場合衝突とみなす
+            // 自身と対象の幅の1/4の距離まで近づいている場合衝突とみなす
             if(dist<=(this.width+v.width) / 4){
                 // 自機キャラクターが対象の場合isComingフラグによって無敵になる
                 if(v instanceof Viper===true){
@@ -673,6 +909,9 @@ class Shot extends Character {
                         }
                         // スコアシステムにもよるが仮でここでは最大スコアを制限
                         gameScore = Math.min(gameScore+score,99999);
+                    }else if(v instanceof Boss===true){
+                        // もし対象がボスキャラクターの場合はスコアを大きく加算
+                        gameScore = Math.min(gameScore+15000,99999);
                     }
                 }
                 // 自身のライフを0にする
@@ -682,6 +921,131 @@ class Shot extends Character {
 
         // 座標系の回転を考慮した描画を行う
         this.rotationDraw();
+    }
+}
+
+/**
+ * homing shotクラス
+ */
+class Homing extends Shot {
+    /**
+     * @constructor
+     * @param {CanvasRenderingContext2D} ctx - 描画などに利用する2Dコンテキスト
+     * @param {number} x,y - X,Y座標
+     * @param {number} w,h - 幅、高さ
+     * @param {Image} image - キャラクター用の画像のパス
+     */
+    constructor(ctx,x,y,w,h,imagePath){
+        // 継承元(Shot)の初期化
+        super(ctx,x,y,w,h,imagePath);
+
+        // 永遠に曲がり続けないようにするためにフレーム数を持たせる
+        this.frame = 0;
+    }
+
+    /**
+     * ホーミングショットを配置する
+     * @param {number} x,y - 配置するX,Y座標
+     * @param {number} [speed] - 設定するスピード
+     * @param {number} [power] - 設定する攻撃力
+     */
+    set(x,y,speed,power){
+        // 登場開始位置にショットを移動させる
+        this.position.set(x,y);
+        // ショットのライフを0より大きい値(生存の状態)に設定する
+        this.life = 1;
+        // スピードを設定する
+        this.setSpeed(speed);
+        // 攻撃力を設定する
+        this.setPower(power);
+        // フレームをリセットする
+        this.frame = 0;
+    }
+
+    /**
+     * キャラクターの状態を更新し描画を行う
+     */
+    update(){
+        // もしショットのライフが0以下の場合は何もしない
+        if(this.life<=0){ return; }
+        // もしショットが画面外へ移動していたらライフを0(非生存の状態)に設定する
+        if(
+            this.position.x+this.width < 0 ||
+            this.position.x-this.width > this.ctx.canvas.width ||
+            this.position.y+this.height < 0 ||
+            this.position.y-this.height > this.ctx.canvas.height
+        ){
+            this.life = 0;
+        }
+        // ショットをホーミングさせながら移動させる
+        // *ホーミングで狙う対象は、this.targetArray[0]のみに限定する
+        let target = this.targetArray[0];
+        // 自身のフレーム数が100より小さい場合はホーミングする
+        if(this.frame<100){
+            // ターゲットとホーミングショットの相対位置からベクトルを生成する
+            let vector = new Position(
+                target.position.x-this.position.x,
+                target.position.y-this.position.y
+            );
+            // 生成したベクトルを単位化する
+            let normalizedVector = vector.normalize();
+            // 自分自身の進行方向ベクトルも、念のため単位化しておく
+            this.vector = this.vector.normalize();
+            // ふたつの単位化済みベクトルから外積を計算する
+            let cross = this.vector.cross(normalizedVector);
+            // 外積の結果は、スクリーン空間では以下のように説明できる
+            // 結果が0.0 → 真正面か真後ろの方角にいる
+            // 結果がプラス → 右半分の方向にいる
+            // 結果がマイナス → 左半分の方向にいる
+            // １フレームで回転できる量は度数法で約1度程度に設定する
+            let rad = Math.PI / 180.0;
+            if(cross>0.0){
+                // 右側にターゲットいるので時計回りに回転させる
+                this.vector.rotate(rad);
+            }else if(cross<0.0){
+                // 左側にターゲットいるので反時計回りに回転させる
+                this.vector.rotate(-rad);
+            }
+            // *真正面や真後ろにいる場合は何もしない
+        }
+        // 進行方向ベクトルを元に移動させる
+        this.position.x+=this.vector.x*this.speed;
+        this.position.y+=this.vector.y*this.speed;
+        // 自身の進行方向からアングルを計算し設定する
+        this.angle = Math.atan2(this.vector.y,this.vector.x);
+
+        // ショットと対象との衝突判定を行う
+        // *以下はShotクラスの衝突判定と全く同じロジック
+        this.targetArray.map((v) => {
+            if(this.life<=0 || v.life<=0){ return; }
+            let dist = this.position.distance(v.position);
+            if(dist<=(this.width+v.width)/4){
+                if(v instanceof Viper===true){
+                    if(v.isComing===true){ return; }
+                }
+                v.life-=this.power;
+                if(v.life<=0){
+                    for(let i=0;i<this.explosionArray.length;++i){
+                        if(this.explosionArray[i].life!==true){
+                            this.explosionArray[i].set(v.position.x,v.position.y);
+                            break;
+                        }
+                    }
+                    if(v instanceof Enemy===true){
+                        let score = 100;
+                        if(v.type==='large'){
+                            score = 1000;
+                        }
+                        gameScore = Math.min(gameScore+score,99999);
+                    }
+                }
+                this.life = 0;
+            }
+        });
+        // 座標系の回転をした描画を行う
+        this.rotationDraw();
+        // 自身のフレームをインクリメントする
+        ++this.frame;
     }
 }
 
